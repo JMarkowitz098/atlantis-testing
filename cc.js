@@ -18,8 +18,8 @@ const main = (input) => {
     if (filteredAnswers.hiddenAnswers) 
         hiddenPayload = createPayloadWithHiddenAnswers(filteredAnswers.hiddenAnswers)
 
-    let customFields = {...fieldPayload.customFields, ...hiddenPayload.customFields}
-    return {...defaultPayload, ...fieldPayload, ...hiddenPayload, customFields}
+    let custom_fields = fieldPayload.customFields.concat(hiddenPayload.customFields)
+    return {...defaultPayload, ...fieldPayload, ...hiddenPayload, custom_fields}
 };
 
 const filterAnswersByDataMapper = (fieldAnswers, hidden, dataMapping) => {
@@ -37,7 +37,7 @@ const filterAnswersByDataMapper = (fieldAnswers, hidden, dataMapping) => {
 }
 
 const createPayloadWithFieldAnswers = (answers, dataMapping) => {
-    let fieldPayload = {}
+    let fieldPayload = {customFields: []}
 
     for (let answer of answers) {
         let ccField = dataMapping[answer.field.id]
@@ -48,7 +48,7 @@ const createPayloadWithFieldAnswers = (answers, dataMapping) => {
 }
 
 const createPayloadWithHiddenAnswers = (hiddenObjs) => {
-    let hiddenPayload = {}
+    let hiddenPayload = { customFields: []}
 
     for (const [hiddenField, hiddenVal] of hiddenObjs) {
         hiddenPayload = fillPayloadByCCType(hiddenPayload, hiddenVal, 'hidden', hiddenField )
@@ -70,6 +70,10 @@ const fillPayloadByCCType = (payload, answer, type, ccField) => {
             break;
 
         case 'kind':
+            if (!payload['street_address']) payload['street_address'] = {}
+            payload['street_address'][ccField] = getFieldByTFType(answer, type).toLowerCase()
+            break
+
         case 'street':
         case 'city':
         case 'state':
@@ -84,8 +88,10 @@ const fillPayloadByCCType = (payload, answer, type, ccField) => {
             break;
 
         default:
-            if (!payload['customFields']) payload['customFields'] = {} 
-            payload['customFields'][ccField] = getFieldByTFType(answer, type)
+            payload['customFields'].push({
+                custom_field_id: ccField,
+                value: getFieldByTFType(answer, type)
+            })
     }
     return payload
 }
